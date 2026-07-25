@@ -1,5 +1,8 @@
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt,BufReader};
+use common::protocol::{Request, Response};
+use common::models::{User};
+use crate::auth;
 pub async fn start_server() {
     let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
     println!("Server started on port 8080");
@@ -16,9 +19,25 @@ pub async fn start_server() {
                 if n == 0 {
                     break;
                 }
-                println!("Received: {}", String::from_utf8_lossy(&buff[0..n]));
-                let res = format!("welcome: {}", address);
-                writer.write_all(res.as_bytes()).await.unwrap();
+                let data = serde_json::from_slice::<Request>(&buff[..n]).unwrap();
+                println!("Received request: {:?}", data);
+                match data {
+                    Request::Ping => {
+                        let res = Response::Pong;
+                        let res_j = serde_json::to_vec(&res).unwrap();
+                        //println!("Sending response: {:?}",res_j);
+                        writer.write_all(&res_j).await.unwrap();
+                        writer.flush().await.unwrap();
+                    },
+                    Request::Register { username, password } => {
+                        let user = User { username:username, password:password };
+                        let response = auth::register(user);
+                        let res_j = serde_json::to_vec(&response).unwrap();
+                        writer.write_all(&res_j).await.unwrap();
+                        writer.flush().await.unwrap();
+                    }
+                    _ =>println!("Unknown request")
+                }
             }
             println!("Connection closed: {}", address);
             // Handle the connection in a separate task
