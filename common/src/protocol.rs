@@ -14,7 +14,7 @@ pub enum Request {
     Upload {
         session_id: String,
         filename: String,
-        size: usize,
+        size: u64,
     },
     Download {
         session_id: String,
@@ -46,9 +46,13 @@ pub enum Response {
 
     Login { session_id: String },
 
-    FileList { files: String},
+    FileList { files: Vec<String>},
     
     Pong,
 
     LoginSuccess { session_id: String },
+
+    ReadyForUpload ,
+
+    ReadyForDownload { size: u64 },
 }

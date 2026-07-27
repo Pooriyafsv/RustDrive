@@ -14,18 +14,18 @@ pub fn register(user: User) -> Response {
         }
     }
 }
-pub fn login(user: User) -> Response {
+pub fn login(user: User) -> Result<User,String> {
     let db = database::load_database();
     let is_this_username_exists = database::find_user(&db, &user.username);
     match is_this_username_exists {
-        Some(user) => {
-            if user.password == user.password {
-                Response::Success{message:"User logged in successfully".to_string()}
+        Some(user_found) => {
+            if user_found.password == user.password {
+                Ok(user.clone())
             } 
             else {
-                Response::Error{message:"Incorrect password".to_string()}
+                Err("Incorrect password".to_string())
             }
         }
-        None => Response::Error{message:"Username does not exist".to_string()}
+        None => Err("user not found".to_string())
     }
 }
