@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::models::{FileMetadata,Access};
+
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Request {
     // Client -> Server
@@ -35,7 +37,16 @@ pub enum Request {
         old_name: String,
         new_name: String,
     },
+    Search {
+        session_id: String,
+        query: String,
+    },
     Ping,
+    ChangeAccess {
+        session_id: String,
+        filename: String,
+        access: Access,
+    }
 }
 #[derive(Serialize, Deserialize, Debug)]
 
@@ -46,7 +57,7 @@ pub enum Response {
 
     Login { session_id: String },
 
-    FileList { files: Vec<String>},
+    FileList { files: Vec<FileMetadata>},
     
     Pong,
 
@@ -55,4 +66,6 @@ pub enum Response {
     ReadyForUpload ,
 
     ReadyForDownload { size: u64 },
+
+    SearchResults { files: Vec<FileMetadata> },
 }

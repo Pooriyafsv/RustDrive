@@ -1,3 +1,4 @@
+use common::models::Access::{Private, Public};
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use common::protocol::{Request, Response};
@@ -245,8 +246,8 @@ pub async fn start_client() {
                                     let res = recv_json(&mut socket_read).await.unwrap();
                                     match res {
                                         Response::FileList { files } =>{
-                                            for (i,name) in files.iter().enumerate(){
-                                                println!("{}.{}",i+1,name);
+                                            for (i,file) in files.iter().enumerate(){
+                                                println!("{}.{} owner {} size {} created at {} category:{}",i+1,file.filename,file.owner,file.filesize,file.created_at,file.category);
                                             }
                                         }
                                         Response::Error { message } =>{
@@ -324,6 +325,72 @@ pub async fn start_client() {
                                         _ => eprintln!("wrong responset"),
                                     }
                                 }
+                                Ok(7) => {
+                                    println!("search:");
+                                    let mut query = String::new();
+                                    std::io::stdin().read_line(&mut query).unwrap();
+                                    let req = Request::Search{query:query.trim().to_string(), session_id:user_session_id.clone()};
+                                    send_json(&mut socket_write, &req).await.unwrap();
+                                    let res = recv_json(&mut socket_read).await.unwrap();
+                                    match res {
+                                        Response::SearchResults { files } => {
+                                            if files.len() == 0 {
+                                                println!("no files found");
+                                                continue;
+                                            } 
+                                            for (i,file) in files.into_iter().enumerate() {
+                                                println!("{}.{} created by{} at{} category:{}", i,file.filename,file.owner,file.created_at,file.category);
+                                            }
+                                        }
+                                        Response::Error { message } => eprintln!("{}", message),
+                                        _ => eprintln!("wrong response"),
+                                    }
+                                }
+                                Ok(8) => {
+                                    println!("enter file name:");
+                                    let mut filename = String::new();
+                                    std::io::stdin().read_line(&mut filename).expect("failed to read line");
+                                    let filename = filename.trim();
+                                    println!("choose your Option:\n1.public\n2.Private");
+                                    let mut option = String::new();
+                                    std::io::stdin().read_line(&mut option).expect("failed to read line");
+                                    let option = option.trim();
+                                    match option {
+                                        "1" => {
+                                            let req = Request::ChangeAccess { session_id:user_session_id.clone(), filename: filename.to_string(), access: Public };
+                                            send_json(&mut socket_write, &req).await.unwrap();
+                                            let res = recv_json(&mut socket_read).await.unwrap();
+                                            match res {
+                                                Response::Success { message } => {
+                                                    println!("{}", message);
+                                                }
+                                                Response::Error { message } => {
+                                                    eprintln!("Error: {}",message);
+                                                }
+                                                _ => eprintln!("try again"),
+                                            }
+
+
+                                        }
+                                        "2" => {
+                                            let req = Request::ChangeAccess { session_id:user_session_id.clone(), filename: filename.to_string(), access: Private };
+                                            send_json(&mut socket_write, &req).await.unwrap();
+                                            let res = recv_json(&mut socket_read).await.unwrap();
+                                            match res {
+                                                Response::Success { message } => {
+                                                    println!("{}", message);
+                                                }
+                                                Response::Error { message } => {
+                                                    eprintln!("Error: {}",message);
+                                                }
+                                                _ => eprintln!("try again"),
+                                            }
+
+                                        }
+                                        _ => eprintln!("wrong input"),
+                                    }
+                                }
+                                
 
 
                                 _ => eprintln!("wrong input"),
