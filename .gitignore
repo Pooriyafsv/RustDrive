@@ -1,0 +1,5 @@
+target/
+server/ap.env
+server/src/api.rs
+data/
+storage/

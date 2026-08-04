@@ -13,8 +13,9 @@ use tokio::sync::Mutex;
 use tokio::fs;
 use common::protocol_io::{send_json,recv_json};
 use chrono::Utc;
+use crate::ai::Agent_c;
 pub async fn start_server(
-    sessions:Arc<Mutex<SessionManager>>,metadata:Arc<Mutex<MetadataManager>>,
+    sessions:Arc<Mutex<SessionManager>>,metadata:Arc<Mutex<MetadataManager>>,agent:Arc<Mutex<Agent_c>>
 ) {
     let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
     println!("Server started on port 8080");
@@ -23,6 +24,7 @@ pub async fn start_server(
         let (mut socket, address) = listener.accept().await.unwrap();
         let sessions = sessions.clone();
         let metadata = metadata.clone();
+        let agent = agent.clone();
         tokio::spawn(async move {
             println!("New connection: {}", address);
             let (reader, mut writer) = socket.split();
@@ -95,11 +97,21 @@ pub async fn start_server(
                         //writer.flush().await.unwrap();  
                         send_json(&mut writer, &res).await.unwrap();
                         let file_info = FileMetadata {
-                            filename: filename,
+                            filename: filename.clone(),
                             filesize: size,
                             owner: username,
                             created_at: Utc::now().format("%Y-%m-%d").to_string(),
-                            category:"Unknown".to_string(),
+                            category:{
+                                let mut manager = agent.lock().await;
+                                match manager.classify(&filename).await{
+                                    Ok(c) => c,
+                                    Err(e) => {
+                                        println!("Error: {}", e);
+                                        "Unknown".to_string()
+                                    }
+                                }
+
+                            },
                             access: Private,
                         };
                         {
@@ -112,7 +124,7 @@ pub async fn start_server(
                         // Handle the upload
                         // ...
                     }
-                    Request::Download { session_id, filename } => {
+                    Request::Download { session_id, filename,owner } => {
                         {let manager = sessions.lock().await;
                         if !manager.validate(session_id.clone()){
                             let response = Response::Error { message: "Invalid session".to_string() };
@@ -126,7 +138,18 @@ pub async fn start_server(
                             let manager = sessions.lock().await;
                             manager.get_username(session_id.clone()).unwrap()
                         };
-                        let path = format!("storage/{}/{}", username,filename);
+                        let is_owner = owner==username;
+                        let accesse = {
+                            let manager = metadata.lock().await;
+                            manager.downloadable(&filename, &owner, is_owner).await
+                        };
+                        if !accesse{
+                            let mut res = Response::Error { message: "access denied".to_string() };
+                            send_json(&mut writer,&res ).await?;
+                            continue;
+                        }
+
+                        let path = format!("storage/{}/{}", owner ,filename);
                         if fs::metadata(&path).await.is_err() {
                             let res = Response::Error { message: "File not found".to_string() };
                             //let res_j = serde_json::to_vec(&res).unwrap();
@@ -316,7 +339,7 @@ pub async fn start_server(
                     }
                     Request::ChangeAccess { session_id, filename, access } =>{
                         {   
-                            let mut manager = sessions.lock().await;
+                            let manager = sessions.lock().await;
                             if !manager.validate(session_id.clone()) {
                                 let response = Response::Error { message: "Invalid session ID".to_string() };
                                 send_json(&mut writer, &response).await.unwrap();
@@ -328,7 +351,7 @@ pub async fn start_server(
                             manager.get_username(session_id.clone()).unwrap()
                         };
                         {
-                            let mut manager = metadata.lock().await;
+                            let manager = metadata.lock().await;
                             
                             let access_int=match access {
                                 Access::Public => 1,

@@ -1,4 +1,4 @@
-use common::models::{FileMetadata,Access};
+use common::models::{Access::{self, Public}, FileMetadata};
 use tokio::fs;
 use serde::{Deserialize, Serialize};
 
@@ -75,10 +75,6 @@ impl MetadataManager {
         }
         files
     }
-
-    pub fn get_all(&self) -> &Vec<FileMetadata> {
-        &self.metadata
-    }
     pub async fn search(&self, filename: &str,user: &str) -> Vec<FileMetadata> {
         let files =self.get_user_files(user);
         let mut target = Vec::new();
@@ -109,6 +105,26 @@ impl MetadataManager {
             }
         }
         files
+    }
+    pub async fn downloadable(&self , filename:&str , owner:&str,is_owner:bool) -> bool{
+        let mut files = self.get_user_files(owner);
+        files.extend_from_slice(&self.public_files().await);
+        for file in files{
+            if file.owner==owner && file.filename == filename{
+                if is_owner{
+                    return true;
+                }
+                match file.access {
+                    Access::Private =>{
+                        return false;
+                    }
+                    Access::Public => {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 }
 

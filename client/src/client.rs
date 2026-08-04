@@ -5,6 +5,7 @@ use common::protocol::{Request, Response};
 use tokio::fs::{self, File};
 use tokio::io::BufReader;
 use common::protocol_io::{recv_json,send_json};
+use crate::progress::print_progress;
 
 pub async fn start_client() {
     println!("{:?}",std::env::current_dir().unwrap());
@@ -118,7 +119,7 @@ pub async fn start_client() {
                                 }
                                 Err(e) => eprintln!("Error: {}", e),
                             }
-                        } // پایان if !is_login
+                        } 
                         
                         if is_login {
                             println!("1.Upload\n 2.Download\n 3.FileList\n 4.Delete\n 5.Exit");
@@ -164,7 +165,7 @@ pub async fn start_client() {
 
                                                 loop {
                                                     let n = file.read(&mut buffer).await.unwrap();
-
+                                                    print_progress(n as u64, file_size);
                                                     if n == 0 {
                                                         break;
                                                     }
@@ -205,7 +206,10 @@ pub async fn start_client() {
                                     println!("Enter file name: ");
                                     std::io::stdin().read_line(&mut file_name).unwrap();
                                     let file_name = file_name.trim();
-                                    let req = Request::Download { session_id:user_session_id.clone(), filename: file_name.to_string() };
+                                    let mut owner = String::new();
+                                    std::io::stdin().read_line(&mut owner).unwrap();
+                                    let owner = owner.trim().to_string();
+                                    let req = Request::Download { session_id:user_session_id.clone(), filename: file_name.to_string(),owner: owner };
                                     //let req_j = serde_json::to_vec(&req).unwrap();
                                     //socket_write.write_all(&req_j).await.unwrap();
                                     send_json(&mut socket_write, &req).await.unwrap();
@@ -220,6 +224,7 @@ pub async fn start_client() {
                                             while downloaded < size {
                                                 let mut buff = [0u8; 4096];
                                                 let n = socket_read.read(&mut buff).await.unwrap();
+                                                print_progress(n as u64, size);
                                                 file.write_all(&buff[..n]).await.unwrap();
                                                 downloaded += n as u64;
                                             }

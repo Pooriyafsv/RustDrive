@@ -21,6 +21,7 @@ pub enum Request {
     Download {
         session_id: String,
         filename: String,
+        owner: String,
     },
     Delete {
         session_id: String,

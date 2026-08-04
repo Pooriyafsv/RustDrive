@@ -14,7 +14,7 @@ pub struct UserSession {
 #[derive(Debug, Deserialize, Serialize,Clone)]
 pub enum Access {
     Public,
-    Shared(Vec<String>),
+    //Shared(Vec<String>),
     Private,
 }
 #[derive(Debug, Deserialize, Serialize,Clone)]
