@@ -20,7 +20,7 @@ pub fn login(user: User) -> Result<User,String> {
     match is_this_username_exists {
         Some(user_found) => {
             if user_found.password == user.password {
-                Ok(user.clone())
+                Ok(user_found.clone())
             } 
             else {
                 Err("Incorrect password".to_string())

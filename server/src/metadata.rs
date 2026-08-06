@@ -75,7 +75,7 @@ impl MetadataManager {
         }
         files
     }
-    pub async fn search(&self, filename: &str,user: &str) -> Vec<FileMetadata> {
+    pub  fn search(&self, filename: &str,user: &str) -> Vec<FileMetadata> {
         let files =self.get_user_files(user);
         let mut target = Vec::new();
         for file in files {
@@ -86,15 +86,16 @@ impl MetadataManager {
         target
     }
 
-    pub fn update_access(&mut self,filename:&str,owner:&str,access:Access)   {
+    pub async fn  update_access(&mut self,filename:&str,owner:&str,access:Access)   {
         for file in &mut self.metadata{
             if file.filename == filename && file.owner == owner.to_string(){
                 file.access = access;
+                self.save().await;
                 return;
             }
         }
     }
-    pub async fn public_files(&self) -> Vec<FileMetadata> {
+    pub  fn public_files(&self) -> Vec<FileMetadata> {
         let mut files = Vec::new();
         for file in &self.metadata {
             match file.access {
@@ -106,9 +107,9 @@ impl MetadataManager {
         }
         files
     }
-    pub async fn downloadable(&self , filename:&str , owner:&str,is_owner:bool) -> bool{
+    pub  fn downloadable(&self , filename:&str , owner:&str,is_owner:bool) -> bool{
         let mut files = self.get_user_files(owner);
-        files.extend_from_slice(&self.public_files().await);
+        files.extend_from_slice(&self.public_files());
         for file in files{
             if file.owner==owner && file.filename == filename{
                 if is_owner{

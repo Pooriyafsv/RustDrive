@@ -3,3 +3,5 @@ server/ap.env
 server/src/api.rs
 data/
 storage/
+pok.txt
+project.txt

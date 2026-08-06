@@ -6,11 +6,7 @@ pub struct User {
     pub username: String,
     pub password: String,
 }
-#[derive(Debug,Clone)]
-pub struct UserSession {
-    pub username: String,
-    pub session_id: String,
-}
+
 #[derive(Debug, Deserialize, Serialize,Clone)]
 pub enum Access {
     Public,

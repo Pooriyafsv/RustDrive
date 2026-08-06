@@ -47,6 +47,9 @@ pub enum Request {
         session_id: String,
         filename: String,
         access: Access,
+    },
+    DeletSession {
+        session_id: String,
     }
 }
 #[derive(Serialize, Deserialize, Debug)]
