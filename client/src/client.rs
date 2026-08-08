@@ -8,7 +8,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
 pub async fn start_client() {
-    println!("{:?}", std::env::current_dir().unwrap());
+    //println!("{:?}", std::env::current_dir().unwrap());
     let  stream = TcpStream::connect("127.0.0.1:8080").await;
     let mut stream = match stream {
         Ok(stream) => stream,
@@ -278,6 +278,12 @@ pub async fn start_client() {
                                     };
                                     match resp {
                                         Response::ReadyForDownload { size } => {
+                                            let mut counter =1;
+                                            let mut download_name = file_name.to_string();
+                                            while fs::metadata(&download_name).await.is_ok(){
+                                                download_name = format!("{}({})",file_name,counter);
+                                                counter += 1;
+                                            }
                                             let mut file = File::create(file_name).await.unwrap();
                                             let mut downloaded = 0;
                                             while downloaded < size {
